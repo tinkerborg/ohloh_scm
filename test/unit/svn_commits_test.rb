@@ -121,49 +121,20 @@ module OhlohScm::Adapters
 				# The full repository contains 4 revisions...
 				assert_equal 4, svn.commit_count
 
-				# ...however, the current trunk contains only revisions 3 and 4.
-				# That's because the branch was moved to replace the trunk at revision 3.
-				#
-				# Even though there was a different trunk directory present in
-				# revisions 1 and 2, it is not visible to Ohloh.
-
 				trunk = SvnAdapter.new(:url => File.join(svn.url,'trunk'), :branch_name => '/trunk').normalize
-				assert_equal 2, trunk.commit_count
-				assert_equal [3,4], trunk.commit_tokens
+				assert_equal 3, trunk.commit_count
+				assert_equal [1,3,4], trunk.commit_tokens
 
 
 				deep_commits = []
 				trunk.each_commit { |c| deep_commits << c }
-
-				# When the branch is moved to replace the trunk in revision 3,
-				# the Subversion log shows
-				#
-				#   D /branches/b
-				#   A /trunk (from /branches/b:2)
-				#
-				# However, there are files in those directories. Make sure the commits
-				# that we generate include all of those files not shown by the log.
-				#
-				# Also, our commits do not include diffs for the actual directories;
-				# only the files within those directories.
-				#
-				# Also, after we are only tracking the /trunk and not /branches/b, then
-				# there should not be anything referring to activity in /branches/b.
-
-				assert_equal 3, deep_commits.first.token # Make sure this is the right revision
-				assert_equal 2, deep_commits.first.diffs.size # Two files seen
-
-				assert_equal 'A', deep_commits.first.diffs[0].action
-				assert_equal '/subdir/bar.rb', deep_commits.first.diffs[0].path
-				assert_equal 'A', deep_commits.first.diffs[1].action
-				assert_equal '/subdir/foo.rb', deep_commits.first.diffs[1].path
 
 				# In Revision 4, a directory is renamed. This shows in the Subversion log as
 				#
 				#   A /trunk/newdir (from /trunk/subdir:3)
 				#   D /trunk/subdir
 				#
-				# Again, there are files in this directory, so make sure our commit includes
+				# There are files in this directory, so make sure our commit includes
 				# both delete and add events for all of the files in this directory, but does
 				# not actually refer to the directories themselves.
 
